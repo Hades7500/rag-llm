@@ -1,4 +1,4 @@
-# Local RAG without Docker: Streamlit UI + Ollama + ChromaDB
+# Local RAG: Streamlit UI + Ollama + ChromaDB
 
 This setup runs everything natively on your machine with **one startup script**:
 
