@@ -42,10 +42,7 @@ _data_dir.mkdir(parents=True, exist_ok=True)
 SYSTEM_PROMPT_FILE = _data_dir / "system_prompt.md"
 
 DEFAULT_SYSTEM_PROMPT = (
-    "You are a helpful assistant. "
-    "When a CONTEXT section is provided, prefer that information in your answer. "
-    "If the context does not fully cover the question, supplement it with your own knowledge. "
-    "Always give a useful answer."
+    "You are a helpful ONGC assistant. Answer only questions related to oil & gas operations. Be concise and factual. Do not make up facts. If you don't know, say \"I don't have that information.\""
 )
 
 
@@ -126,9 +123,9 @@ def _init_state() -> None:
         "system_prompt": _load_system_prompt(),
         "chat_model": DEFAULT_CHAT_MODEL,
         "rag_enabled": True,
-        "top_k": 3,
+        "top_k": 5,
         "score_threshold": 1.5,
-        "max_context_chars": 2000,
+        "max_context_chars": 4000,
         "view": "chat",
     }
     for key, val in defaults.items():
@@ -529,11 +526,11 @@ def _render_sidebar() -> None:
             st.session_state.score_threshold = st.slider(
                 "Similarity threshold",
                 min_value=0.1,
-                max_value=2.0,
+                max_value=5.0,
                 value=st.session_state.score_threshold,
                 step=0.05,
-                help="L2 distance cutoff. Lower = only very close matches. "
-                "Raise if too few chunks are retrieved.",
+                help="Always keeps the best chunk. Higher values add more "
+                "nearby chunks to the context.",
             )
             st.session_state.max_context_chars = st.slider(
                 "Max context chars",
@@ -617,6 +614,7 @@ def _render_chat() -> None:
                         retrieval_q,
                         n_results=st.session_state.top_k,
                         score_threshold=st.session_state.score_threshold,
+                        min_results=1,
                     )
                 except Exception as exc:
                     st.warning(f"RAG retrieval skipped: {exc}")

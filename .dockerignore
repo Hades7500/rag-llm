@@ -1,0 +1,10 @@
+.venv/
+.git/
+.gitignore
+data/
+logs/
+__pycache__/
+*.pyc
+.env
+*.pdf
+Training Plan May June 2026.pdf

@@ -57,30 +57,34 @@ def query_collection(
     query: str,
     n_results: int = 3,
     score_threshold: float = 1.0,
+    min_results: int = 1,
 ) -> tuple[list[str], list[float]]:
     """Return (chunks, distances) for the top-n most relevant results.
 
-    Only chunks whose L2 distance is <= score_threshold are returned.
-    Lower distance = more similar.  Typical range for nomic-embed-text:
-      0.0 – 0.5  very similar
-      0.5 – 1.0  related
-      1.0 – 1.5  loosely related
-      > 1.5      probably irrelevant
+    Always keep at least ``min_results`` top matches. Chroma distance scales can
+    vary across embedding models and versions, so using the threshold as a hard
+    gate can hide facts that are clearly present in small PDFs.
     """
     total = col.count()
     if total == 0:
         return [], []
+    n = min(max(n_results, min_results), total)
     results = col.query(
         query_texts=[query],
-        n_results=min(n_results, total),
+        n_results=n,
         include=["documents", "distances"],
     )
     docs = results.get("documents", [[]])[0] or []
     dists = results.get("distances", [[]])[0] or []
-    filtered = [
-        (doc, dist) for doc, dist in zip(docs, dists) if dist <= score_threshold
-    ]
-    if not filtered:
+    ranked = list(zip(docs, dists))
+    if not ranked:
         return [], []
-    out_docs, out_dists = zip(*filtered)
+
+    keep = ranked[:min_results]
+    keep.extend(
+        (doc, dist)
+        for doc, dist in ranked[min_results:]
+        if dist <= score_threshold
+    )
+    out_docs, out_dists = zip(*keep)
     return list(out_docs), list(out_dists)

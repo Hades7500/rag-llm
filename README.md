@@ -236,6 +236,34 @@ STREAMLIT_PORT=8501
 
 On next start, Ollama pulls any missing models automatically.
 
+### Docker DNS/model pull errors
+
+If `rag-ollama` fails with an error like:
+
+```text
+lookup registry.ollama.ai on 127.0.0.53:53: read: connection refused
+```
+
+Docker cannot resolve Ollama's model registry from inside the container. This
+compose file sets public DNS servers for the Ollama container, and the entrypoint
+retries failed model pulls. Restart just Ollama first:
+
+```bash
+docker compose up ollama
+```
+
+If it still fails, check host DNS/internet access:
+
+```bash
+docker run --rm busybox nslookup registry.ollama.ai
+```
+
+After models finish pulling, start the full stack:
+
+```bash
+docker compose up --build
+```
+
 ### GPU support
 
 Uncomment the `deploy.resources.reservations.devices` block under `ollama` in

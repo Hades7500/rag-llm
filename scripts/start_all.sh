@@ -27,6 +27,13 @@ RAG_EMBEDDING_MODEL="${RAG_EMBEDDING_MODEL:-nomic-embed-text}"
 LOG_DIR="${LOG_DIR:-./logs}"
 
 STREAMLIT_PORT="${STREAMLIT_PORT:-8501}"
+STREAMLIT_ADDRESS="${STREAMLIT_ADDRESS:-127.0.0.1}"
+STREAMLIT_BIN="${STREAMLIT_BIN:-.venv/bin/streamlit}"
+
+SKIP_VENV="${SKIP_VENV:-0}"
+SKIP_OLLAMA="${SKIP_OLLAMA:-0}"
+SKIP_CHROMA="${SKIP_CHROMA:-0}"
+FOREGROUND="${FOREGROUND:-0}"
 
 OLLAMA_PID=""
 CHROMA_PID=""
@@ -211,14 +218,22 @@ start_open_webui() {
 }
 
 start_streamlit() {
-  if http_ok "http://127.0.0.1:$STREAMLIT_PORT/_stcore/health"; then
+  if [ "$FOREGROUND" != "1" ] && http_ok "http://127.0.0.1:$STREAMLIT_PORT/_stcore/health"; then
     echo "Streamlit is already running at http://127.0.0.1:$STREAMLIT_PORT"
     return 0
   fi
 
   echo "Starting Streamlit... logs: $LOG_DIR/streamlit.log"
-  .venv/bin/streamlit run app/main.py \
+  if [ "$FOREGROUND" = "1" ]; then
+    exec "$STREAMLIT_BIN" run app/main.py \
+      --server.port "$STREAMLIT_PORT" \
+      --server.address "$STREAMLIT_ADDRESS" \
+      --server.headless true
+  fi
+
+  "$STREAMLIT_BIN" run app/main.py \
     --server.port "$STREAMLIT_PORT" \
+    --server.address "$STREAMLIT_ADDRESS" \
     --server.headless true \
     > "$LOG_DIR/streamlit.log" 2>&1 &
   STREAMLIT_PID="$!"
@@ -226,11 +241,17 @@ start_streamlit() {
 }
 
 ensure_appimage
-ensure_venv
-start_ollama
-ensure_ollama_model "$CHAT_MODEL"
-ensure_ollama_model "$RAG_EMBEDDING_MODEL"
-start_chromadb
+if [ "$SKIP_VENV" != "1" ]; then
+  ensure_venv
+fi
+if [ "$SKIP_OLLAMA" != "1" ]; then
+  start_ollama
+  ensure_ollama_model "$CHAT_MODEL"
+  ensure_ollama_model "$RAG_EMBEDDING_MODEL"
+fi
+if [ "$SKIP_CHROMA" != "1" ]; then
+  start_chromadb
+fi
 start_streamlit
 start_open_webui
 
